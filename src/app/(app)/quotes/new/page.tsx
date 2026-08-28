@@ -25,6 +25,7 @@ export default async function NewQuotePage() {
       <QuoteBuilder
         defaults={{
           hourlyRate: settings.hourlyRate,
+          vatRegistered: settings.vatRegistered,
           vatRatePercent: settings.vatRatePercent,
           defaultTermsAndNotes: settings.defaultTermsAndNotes,
         }}

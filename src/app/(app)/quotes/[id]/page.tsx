@@ -173,12 +173,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                     </dt>
                     <dd>{formatGBP(totals.vat)}</dd>
                   </div>
-                ) : (
-                  <div className="flex justify-between">
-                    <dt className="text-muted">VAT</dt>
-                    <dd>Not applied</dd>
-                  </div>
-                )}
+                ) : null}
                 <div className="flex justify-between border-t border-line-soft pt-2">
                   <dt className="font-semibold text-white">Total</dt>
                   <dd className="text-lg font-bold text-bulb">{formatGBP(totals.total)}</dd>

@@ -98,6 +98,23 @@ export default function SettingsForm({ settings }: { settings: Settings }) {
             defaultValue={settings.quoteNumberPrefix}
           />
         </div>
+
+        <label className="mt-4 flex items-start gap-3 rounded-lg border border-line-soft p-3 text-sm">
+          <input
+            type="checkbox"
+            name="vatRegistered"
+            defaultChecked={settings.vatRegistered}
+            className="mt-0.5 h-4 w-4 accent-[var(--color-brand)]"
+          />
+          <span>
+            <span className="font-semibold text-white">The business is VAT registered</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              Leave this off if you aren&rsquo;t registered. Quotes then carry no VAT at all &mdash;
+              no VAT line, no VAT in the total &mdash; and the rate above is ignored. Quotes you have
+              already sent keep whatever they were built with.
+            </span>
+          </span>
+        </label>
         <p className="mt-2 text-xs text-muted">
           Next quote will be numbered{" "}
           <span className="font-mono text-body">

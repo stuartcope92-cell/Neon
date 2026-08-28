@@ -48,6 +48,12 @@ export const settings = pgTable("settings", {
   email: text("email"),
   website: text("website"),
   hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }).notNull().default("0"),
+  /**
+   * Whether the business is VAT registered. Defaults to false: charging VAT you
+   * aren't registered for is a legal problem, so VAT is opt-in rather than
+   * something you have to remember to switch off.
+   */
+  vatRegistered: boolean("vat_registered").notNull().default(false),
   vatRatePercent: numeric("vat_rate_percent", { precision: 5, scale: 2 }).notNull().default("20"),
   defaultTermsAndNotes: text("default_terms_and_notes").notNull().default(""),
   quoteNumberPrefix: text("quote_number_prefix").notNull().default("NQ-"),

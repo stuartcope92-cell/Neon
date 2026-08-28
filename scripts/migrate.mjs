@@ -21,7 +21,10 @@ if (url.includes(":6543")) {
   console.warn("Warning: this looks like the pooled connection. Migrations want DIRECT_URL (:5432).");
 }
 
-const client = postgres(url, { max: 1 });
+// Postgres emits NOTICEs for the migrator's CREATE ... IF NOT EXISTS statements
+// ("schema drizzle already exists, skipping"). They are not errors; postgres.js
+// prints them to stderr, where they read like failures.
+const client = postgres(url, { max: 1, onnotice: () => {} });
 await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
 await client.end();
 console.log("Migrations applied.");

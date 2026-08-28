@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { customers, quoteLineItems, quotes, type QuoteStatus } from "@/db/schema";
 import { requireSession } from "@/lib/auth";
 import { getQuote, logQuoteEvent } from "@/lib/quotes";
-import { reserveQuoteNumber } from "@/lib/settings";
+import { getSettings, reserveQuoteNumber } from "@/lib/settings";
 import { STATUS_LABELS, type ActionState, type QuoteFormPayload } from "@/lib/types";
 import { toNumber } from "@/lib/money";
 import { addDaysISO } from "@/lib/dates";
@@ -70,10 +70,14 @@ export async function saveQuoteAction(
   let quoteId = payload.quoteId;
   try {
     const customerId = await resolveCustomerId(payload);
+    // Never take the client's word on VAT: if the business isn't VAT registered,
+    // no quote it produces may include it, whatever the form posted.
+    const settings = await getSettings();
+    const vatApplied = settings.vatRegistered && payload.vatApplied;
     const shared = {
       customerId,
       signDescription: payload.signDescription.trim(),
-      vatApplied: payload.vatApplied,
+      vatApplied,
       vatRatePercent: decimal(payload.vatRatePercent, "20"),
       discountPercent: decimal(payload.discountPercent),
       validUntil: payload.validUntil || null,

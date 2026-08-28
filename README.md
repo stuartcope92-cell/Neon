@@ -241,9 +241,19 @@ Totals are derived, never stored:
 ```
 subtotal = Σ(quantity × unit price)
 discount = subtotal × discount%
-vat      = (subtotal − discount) × vat%   (if VAT is applied)
+vat      = (subtotal − discount) × vat%   (if VAT applies)
 total    = subtotal − discount + vat
 ```
+
+**VAT.** Settings has a *VAT registered* switch, off by default — charging VAT you aren't
+registered for is a legal problem, so it is opt-in rather than something you have to remember to
+switch off. While it is off: the quote builder hides the per-quote VAT toggle, and neither the PDF
+nor the on-screen quote shows a VAT line at all (not "VAT: not applied" — no mention of VAT). The
+rule is enforced in `saveQuoteAction`, not just in the UI, so a quote cannot carry VAT that the
+business isn't registered for whatever the form posts.
+
+Quotes snapshot `vatApplied` and `vatRatePercent` when saved, so a quote raised while registered
+keeps its VAT if registration is later switched off, and vice versa.
 
 Each step is rounded to whole pence ([src/lib/money.ts](src/lib/money.ts)). Quotes snapshot their
 VAT rate and terms text at creation time, so editing Settings never rewrites a quote that has

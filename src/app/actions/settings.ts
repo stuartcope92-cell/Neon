@@ -62,6 +62,7 @@ export async function saveSettingsAction(
       email: text(formData, "email"),
       website: text(formData, "website"),
       hourlyRate: decimal(formData, "hourlyRate", "0"),
+      vatRegistered: formData.get("vatRegistered") === "on",
       vatRatePercent: decimal(formData, "vatRatePercent", "20"),
       defaultTermsAndNotes: String(formData.get("defaultTermsAndNotes") ?? ""),
       quoteNumberPrefix: String(formData.get("quoteNumberPrefix") ?? "").trim(),

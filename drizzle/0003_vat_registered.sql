@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "vat_registered" boolean DEFAULT false NOT NULL;

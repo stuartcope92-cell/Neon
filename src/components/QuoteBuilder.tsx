@@ -11,6 +11,7 @@ import type { Customer, LineItemType, MaterialPrice } from "@/db/schema";
 
 export type BuilderDefaults = {
   hourlyRate: string;
+  vatRegistered: boolean;
   vatRatePercent: string;
   defaultTermsAndNotes: string;
 };
@@ -65,7 +66,10 @@ export default function QuoteBuilder({
   const [discountPercent, setDiscountPercent] = useState(
     quote ? String(toNumber(quote.discountPercent)) : "0",
   );
-  const [vatApplied, setVatApplied] = useState(quote?.vatApplied ?? true);
+  // VAT is only ever an option for a VAT-registered business.
+  const [vatApplied, setVatApplied] = useState(
+    defaults.vatRegistered ? (quote?.vatApplied ?? true) : false,
+  );
   const [vatRatePercent] = useState(quote?.vatRatePercent ?? defaults.vatRatePercent);
   const [validUntil, setValidUntil] = useState(quote?.validUntil ?? addDaysISO(30));
   const [internalNotes, setInternalNotes] = useState(quote?.internalNotes ?? "");
@@ -495,15 +499,24 @@ export default function QuoteBuilder({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={vatApplied}
-              onChange={(event) => setVatApplied(event.target.checked)}
-              className="h-4 w-4 accent-[var(--color-brand)]"
-            />
-            Apply VAT at {toNumber(vatRatePercent)}%
-          </label>
+          {defaults.vatRegistered ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={vatApplied}
+                onChange={(event) => setVatApplied(event.target.checked)}
+                className="h-4 w-4 accent-[var(--color-brand)]"
+              />
+              Apply VAT at {toNumber(vatRatePercent)}%
+            </label>
+          ) : (
+            <p className="text-xs text-muted">
+              No VAT — the business isn&rsquo;t VAT registered.{" "}
+              <Link href="/settings" className="text-accent hover:underline">
+                Change in Settings
+              </Link>
+            </p>
+          )}
 
           <dl className="space-y-2 border-t border-line-soft pt-4 text-sm">
             <TotalRow label="Subtotal" value={formatGBP(totals.subtotal)} />
@@ -515,9 +528,7 @@ export default function QuoteBuilder({
             ) : null}
             {vatApplied ? (
               <TotalRow label={`VAT (${toNumber(vatRatePercent)}%)`} value={formatGBP(totals.vat)} />
-            ) : (
-              <TotalRow label="VAT" value="Not applied" />
-            )}
+            ) : null}
             <div className="flex items-center justify-between border-t border-line-soft pt-3">
               <dt className="font-semibold text-white">Total</dt>
               <dd className="text-xl font-bold text-brand">{formatGBP(totals.total)}</dd>

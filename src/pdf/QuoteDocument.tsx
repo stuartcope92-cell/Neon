@@ -191,6 +191,8 @@ export default function QuoteDocument({ data }: { data: QuotePdfData }) {
               <Text>-{formatGBP(totals.discount)}</Text>
             </View>
           ) : null}
+          {/* No VAT line at all when it doesn't apply — a quote from a business that
+              isn't VAT registered shouldn't mention VAT. */}
           {data.vatApplied ? (
             <View style={styles.totalsRow}>
               <Text style={styles.muted}>
@@ -198,12 +200,7 @@ export default function QuoteDocument({ data }: { data: QuotePdfData }) {
               </Text>
               <Text>{formatGBP(totals.vat)}</Text>
             </View>
-          ) : (
-            <View style={styles.totalsRow}>
-              <Text style={styles.muted}>VAT</Text>
-              <Text>Not applied</Text>
-            </View>
-          )}
+          ) : null}
           <View style={styles.grandTotalRow}>
             <Text style={styles.strong}>Total</Text>
             <Text style={styles.grandTotal}>{formatGBP(totals.total)}</Text>
