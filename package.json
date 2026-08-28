@@ -12,7 +12,8 @@
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "db:push": "drizzle-kit push",
     "hash-password": "node scripts/hash-password.mjs",
-    "db:check": "node --env-file=.env.local scripts/check-connection.mjs"
+    "db:check": "node --env-file=.env.local scripts/check-connection.mjs",
+    "db:password": "node scripts/set-db-password.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",

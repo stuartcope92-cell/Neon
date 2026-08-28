@@ -52,7 +52,19 @@ Generate the password hash and a session secret:
 npm run hash-password -- "your-password"
 ```
 
-### 3. Check the link, create the tables, run it
+### 3. Set the database password
+
+Paste both connection strings into `.env.local` leaving `[YOUR-PASSWORD]` in place, then:
+
+```bash
+npm run db:password
+```
+
+It prompts with the input hidden, URL-encodes whatever you type (so `@ : / ? #` in a password
+can't break the connection string) and substitutes it into both URLs. The password never appears
+on screen or in your shell history.
+
+### 4. Check the link, create the tables, run it
 
 Confirm both connection strings and the storage bucket are wired up correctly:
 
@@ -75,7 +87,7 @@ Sign in at `/login`, then go to **Settings** and set your company details, hourl
 material price list before creating your first quote. The database ships empty — there is no seed
 data.
 
-### 4. GitHub → Vercel
+### 5. GitHub → Vercel
 
 ```bash
 git init && git add -A && git commit -m "Neon sign quote creator"
@@ -158,6 +170,7 @@ created at the same moment can't collide. Numbers are formatted as `{prefix}{000
 | `npm run dev` | Dev server on http://localhost:3000 |
 | `npm run build` / `npm start` | Production build / serve |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run db:password` | Write your database password into `.env.local`, hidden input |
 | `npm run db:check` | Verify the Supabase connection, schema, RLS and storage bucket |
 | `npm run db:generate` | Regenerate SQL migrations from `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations in `drizzle/` (uses `DIRECT_URL`) |
