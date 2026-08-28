@@ -1,15 +1,19 @@
 /**
- * Node-runtime auth: password hashing/verification plus the server-side helpers
- * used by server components and server actions.
+ * Node-runtime auth: password hashing plus the server-side session helpers used
+ * by server components and server actions.
  *
- * Credentials come from environment variables (ADMIN_EMAIL, ADMIN_PASSWORD_HASH)
- * — nothing is hardcoded and no signup flow exists. See scripts/hash-password.mjs.
+ * Accounts live in the `users` table. Everyone who signs up shares the same
+ * business data — this is several logins for one company, not multi-tenancy.
+ * Signup is gated by SIGNUP_CODE so strangers can't register themselves.
  */
 import "server-only";
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users, type User } from "@/db/schema";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
@@ -25,6 +29,12 @@ const scrypt = promisify(scryptCb) as (
 ) => Promise<Buffer>;
 
 const KEY_LENGTH = 64;
+
+export const MIN_PASSWORD_LENGTH = 10;
+
+export function normaliseEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
@@ -42,20 +52,77 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(derived, expected);
 }
 
-export async function authenticate(email: string, password: string): Promise<boolean> {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminHash = process.env.ADMIN_PASSWORD_HASH;
-  if (!adminEmail || !adminHash) {
-    throw new Error("ADMIN_EMAIL / ADMIN_PASSWORD_HASH are not configured.");
-  }
-  const emailMatches = email.trim().toLowerCase() === adminEmail.trim().toLowerCase();
-  // Always run the hash comparison so a wrong email isn't faster than a wrong password.
-  const passwordMatches = await verifyPassword(password, adminHash);
-  return emailMatches && passwordMatches;
+/** A throwaway hash, compared against when no such user exists, to keep the
+ *  response time for "unknown email" close to that for "wrong password". */
+const DUMMY_HASH =
+  "scrypt:00000000000000000000000000000000:" + "0".repeat(KEY_LENGTH * 2);
+
+export async function authenticate(email: string, password: string): Promise<User | null> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, normaliseEmail(email)))
+    .limit(1);
+
+  const matches = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
+  if (!user || !matches) return null;
+
+  await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+  return user;
 }
 
-export async function startSession(email: string): Promise<void> {
-  const token = await createSessionToken({ email });
+export type SignupResult = { user: User } | { error: string };
+
+export async function createUser(
+  email: string,
+  password: string,
+  signupCode: string,
+): Promise<SignupResult> {
+  const expectedCode = process.env.SIGNUP_CODE;
+  if (!expectedCode) {
+    return { error: "Signup isn't configured. Set SIGNUP_CODE to allow new accounts." };
+  }
+  if (signupCode.trim() !== expectedCode) {
+    return { error: "That signup code isn't right." };
+  }
+
+  const normalised = normaliseEmail(email);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalised)) {
+    return { error: "Enter a valid email address." };
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Use a password of at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
+
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, normalised))
+    .limit(1);
+  if (existing) return { error: "There's already an account with that email." };
+
+  try {
+    const [user] = await db
+      .insert(users)
+      .values({ email: normalised, passwordHash: await hashPassword(password) })
+      .returning();
+    return { user };
+  } catch (error) {
+    // Unique constraint — someone registered the same email in the meantime.
+    if (error instanceof Error && /unique|duplicate/i.test(error.message)) {
+      return { error: "There's already an account with that email." };
+    }
+    throw error;
+  }
+}
+
+export async function countUsers(): Promise<number> {
+  const rows = await db.select({ id: users.id }).from(users);
+  return rows.length;
+}
+
+export async function startSession(user: { id: number; email: string }): Promise<void> {
+  const token = await createSessionToken({ userId: user.id, email: user.email });
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,

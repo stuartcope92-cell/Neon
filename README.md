@@ -43,15 +43,8 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, for the logo upload |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side only. Never goes near the browser |
 | `SUPABASE_STORAGE_BUCKET` | Bucket name, defaults to `branding` |
-| `ADMIN_EMAIL` | The one admin login |
-| `ADMIN_PASSWORD_HASH` | scrypt hash of the admin password |
+| `SIGNUP_CODE` | Code required at `/signup` to create a login |
 | `SESSION_SECRET` | 32+ random characters used to sign the session cookie |
-
-Generate the password hash and a session secret:
-
-```bash
-npm run hash-password -- "your-password"
-```
 
 ### 3. Set the database password
 
@@ -110,16 +103,14 @@ are waiting either side of it, and `npm run db:check` catches both:
 - The **transaction pooler** (`:6543`) connects fine and then deadlocks under any concurrency —
   see [Database access](#database-access).
 
-#### 2. Set a real admin password
+#### 2. Use a different signup code and session secret
 
-The credentials in your local `.env.local` are for development. Generate a fresh hash for
-production so the deployed app doesn't share a password with your laptop:
+Set a `SIGNUP_CODE` for production that isn't the one in your local `.env.local`, and a different
+`SESSION_SECRET`. Anyone with the code can create a login that sees all your quotes and customers.
 
 ```bash
-npm run hash-password -- "a-strong-production-password"
+node -e "console.log(require('crypto').randomBytes(12).toString('hex'))"
 ```
-
-Use a different `SESSION_SECRET` in production too.
 
 #### 3. Environment variables
 
@@ -130,8 +121,7 @@ deployments to work):
 | --- | --- |
 | `DATABASE_URL` | Transaction pooler string, port `6543` |
 | `SESSION_SECRET` | A fresh 32+ character random string |
-| `ADMIN_EMAIL` | Your real admin email |
-| `ADMIN_PASSWORD_HASH` | The production hash from step 2 |
+| `SIGNUP_CODE` | The code people need in order to create a login |
 | `NEXT_PUBLIC_SUPABASE_URL` | Only if you want logo upload |
 | `SUPABASE_SERVICE_ROLE_KEY` | Only if you want logo upload |
 | `SUPABASE_STORAGE_BUCKET` | Only if your bucket isn't named `branding` |
@@ -166,7 +156,7 @@ matching your Supabase project (for a London project, `lhr1`).
 ```
 src/
   app/
-    login/               Login page (the only unauthenticated route)
+    login/, signup/      The only unauthenticated routes
     (app)/               Everything behind auth: dashboard, quote builder, quote detail, settings
     api/quotes/[id]/pdf  Server-rendered PDF download
     actions/             Server actions (auth, quotes, settings)
@@ -174,7 +164,7 @@ src/
   db/                    Drizzle schema + lazily-connected postgres.js client
   lib/                   Auth/session, storage, money + date helpers, quote and settings queries
   pdf/QuoteDocument.tsx  The branded PDF template
-middleware.ts            Redirects unauthenticated requests to /login
+  middleware.ts          Redirects unauthenticated requests to /login
 ```
 
 ### Database access
@@ -204,12 +194,26 @@ the data. The app connects as `postgres`, which bypasses RLS, so it is unaffecte
 
 ### Auth
 
-One admin account, credentials in environment variables — no signup flow, nothing hardcoded. This
-app does **not** use Supabase Auth: for a single-user tool it would be a second identity system to
-manage for no gain. Passwords are stored as `scrypt:<salt>:<hash>` (colon-separated, because Next's
-dotenv would try to expand a `$`-delimited value). `middleware.ts` bounces unauthenticated requests,
-and every server component, server action and the PDF route independently calls `requireSession()` /
-`getSession()` — the UI check is never the only check.
+Accounts live in the `users` table. Anyone with the `SIGNUP_CODE` can create a login at `/signup`,
+and **every login shares the same data** — the same quotes, customers, material prices and
+settings. This is several people in one business, not a multi-tenant app: there is no per-account
+isolation, so only hand the code to people you'd trust with the whole customer list. Change
+`SIGNUP_CODE` to stop new signups; existing logins keep working.
+
+Passwords are hashed with scrypt (`scrypt:<salt>:<hash>`, colon-separated because Next's dotenv
+would try to expand a `$`-delimited value) and never stored in any other form. Logging in with an
+unknown email still runs a hash comparison, so it takes about as long as a wrong password and
+doesn't reveal which emails exist.
+
+Sessions are a signed JWT in an httpOnly cookie, good for 7 days.
+[src/middleware.ts](src/middleware.ts) bounces unauthenticated requests to `/login` (and sends
+signed-in users away from `/login` and `/signup`), and every server component, server action and
+the PDF route independently calls `requireSession()` / `getSession()` — the middleware is a
+convenience, never the only check.
+
+Two things this deliberately does not have, being a small internal tool: **password reset** (locked
+out means signing up again with the code) and **session revocation** (deleting a user doesn't kill
+a session they already hold until it expires). Both are easy to add if you want them.
 
 ### Pricing
 
@@ -243,7 +247,6 @@ created at the same moment can't collide. Numbers are formatted as `{prefix}{000
 | `npm run db:check` | Verify the Supabase connection, schema, RLS and storage bucket |
 | `npm run db:generate` | Regenerate SQL migrations from `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations in `drizzle/` (uses `DIRECT_URL`) |
-| `npm run hash-password -- "pw"` | Print an `ADMIN_PASSWORD_HASH` (and a spare `SESSION_SECRET`) |
 
 ## Not in v1
 

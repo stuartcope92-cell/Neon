@@ -21,6 +21,20 @@ export const quoteStatusEnum = pgEnum("quote_status", [
 
 export const lineItemTypeEnum = pgEnum("line_item_type", ["labour", "material", "custom"]);
 
+/**
+ * Logins for the business. Everyone here shares the same quotes, customers,
+ * prices and settings — this is one business with several people, not a
+ * multi-tenant app. Signup is gated by SIGNUP_CODE.
+ */
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  /** Always stored lowercase so logins are case-insensitive. */
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+});
+
 /** Singleton row (id = 1) holding company branding and pricing defaults. */
 export const settings = pgTable("settings", {
   id: integer("id").primaryKey().default(1),
@@ -119,6 +133,7 @@ export const customersRelations = relations(customers, ({ many }) => ({
   quotes: many(quotes),
 }));
 
+export type User = typeof users.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
 export type MaterialPrice = typeof materialPrices.$inferSelect;
 export type Customer = typeof customers.$inferSelect;

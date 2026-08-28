@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { loginAction } from "@/app/actions/auth";
 import type { ActionState } from "@/lib/types";
 
@@ -16,6 +17,9 @@ function SubmitButton() {
 
 export default function LoginForm({ next }: { next: string }) {
   const [state, formAction] = useActionState<ActionState, FormData>(loginAction, {});
+  // React 19 resets the form after an action runs; keep the email so a wrong
+  // password doesn't mean retyping both fields.
+  const [email, setEmail] = useState("");
 
   return (
     <form action={formAction} className="card space-y-4 p-6">
@@ -32,6 +36,8 @@ export default function LoginForm({ next }: { next: string }) {
           required
           className="field"
           placeholder="you@yourcompany.co.uk"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
         />
       </div>
       <div>
@@ -53,6 +59,13 @@ export default function LoginForm({ next }: { next: string }) {
         </p>
       ) : null}
       <SubmitButton />
+
+      <p className="text-center text-sm text-muted">
+        Need a login?{" "}
+        <Link href="/signup" className="text-accent hover:underline">
+          Create an account
+        </Link>
+      </p>
     </form>
   );
 }

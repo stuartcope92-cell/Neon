@@ -9,7 +9,9 @@ export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
 
-  if (pathname === "/login") {
+  const isPublic = pathname === "/login" || pathname === "/signup";
+
+  if (isPublic) {
     if (session) return NextResponse.redirect(new URL("/", request.url));
     return NextResponse.next();
   }
