@@ -14,8 +14,13 @@ branded PDFs, and tracking their status. Built to the brief in
 
 Create a project at [supabase.com](https://supabase.com), then:
 
-- **Database → Connection string** — copy both the *transaction pooler* string (port `6543`) and the
-  *direct* string (port `5432`). The app runs on the pooler; migrations need the direct connection.
+- **Connect → Connection string** — copy both the *transaction pooler* string (port `6543`) and a
+  port `5432` string. The app runs on the pooler; migrations need the `5432` connection.
+
+  If the *direct* connection (`db.<ref>.supabase.co:5432`) times out, use the **session pooler**
+  string instead — same port `5432`, but on `...pooler.supabase.com`. Direct connections are
+  IPv6-only on new Supabase projects, so they fail on IPv4-only networks. The session pooler is the
+  IPv4-friendly equivalent and runs migrations fine.
 - **Storage → New bucket** — create a **public** bucket called `branding` (this is where the company
   logo lives). Skip this if you don't need a logo on your PDFs.
 - **Project Settings → API** — copy the project URL and the `service_role` key.
@@ -47,7 +52,16 @@ Generate the password hash and a session secret:
 npm run hash-password -- "your-password"
 ```
 
-### 3. Create the tables and run it
+### 3. Check the link, create the tables, run it
+
+Confirm both connection strings and the storage bucket are wired up correctly:
+
+```bash
+npm run db:check
+```
+
+It reports each item separately and tells you how to fix whatever is wrong (placeholder password
+left in, pooler and direct strings swapped, bucket missing or private, migrations not applied).
 
 ```bash
 npm run db:migrate
@@ -144,6 +158,7 @@ created at the same moment can't collide. Numbers are formatted as `{prefix}{000
 | `npm run dev` | Dev server on http://localhost:3000 |
 | `npm run build` / `npm start` | Production build / serve |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run db:check` | Verify the Supabase connection, schema, RLS and storage bucket |
 | `npm run db:generate` | Regenerate SQL migrations from `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations in `drizzle/` (uses `DIRECT_URL`) |
 | `npm run hash-password -- "pw"` | Print an `ADMIN_PASSWORD_HASH` (and a spare `SESSION_SECRET`) |
