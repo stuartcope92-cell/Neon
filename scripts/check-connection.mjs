@@ -59,7 +59,7 @@ function explain(error) {
   return message;
 }
 
-async function checkConnection(label, url, { expectedPort, prepare }) {
+async function checkConnection(label, url, { expectedPort, prepare, isRuntime = false }) {
   console.log(`\n${label}`);
 
   if (!url) {
@@ -78,22 +78,25 @@ async function checkConnection(label, url, { expectedPort, prepare }) {
   }
   const isDirectHost = /^db\..*\.supabase\.co$/.test(parts.host);
 
-  if (parts.port !== expectedPort) {
-    if (expectedPort === "6543" && isDirectHost) {
-      // Fine for local dev, fatal in production: Vercel functions are IPv4-only
-      // and db.<ref>.supabase.co resolves to IPv6 only.
+  if (isRuntime) {
+    if (parts.port === "6543") {
+      // postgres.js pipelines queries; Supavisor's transaction mode can't split a
+      // pipelined connection across server connections, so overlapping queries
+      // deadlock. Measured: wedges at 5 concurrent queries.
+      bad(
+        "DATABASE_URL is the transaction pooler (:6543)",
+        "Use the session pooler instead — same host, port 5432. Transaction mode " +
+          "deadlocks this driver as soon as two queries overlap.",
+      );
+    } else if (isDirectHost) {
+      // Works from a dev machine with IPv6; Vercel's functions are IPv4-only.
       warn(
         "DATABASE_URL is the direct connection, not the pooler",
-        "OK locally. Before deploying, swap in the transaction pooler string (:6543).",
-      );
-    } else {
-      warn(
-        `Port is ${parts.port}, expected ${expectedPort}`,
-        expectedPort === "6543"
-          ? "DATABASE_URL should be the transaction pooler (:6543)."
-          : "DIRECT_URL should be a port 5432 connection.",
+        "OK locally. Before deploying, use the session pooler string (...pooler.supabase.com:5432).",
       );
     }
+  } else if (parts.port !== expectedPort) {
+    warn(`Port is ${parts.port}, expected ${expectedPort}`, "DIRECT_URL should be a port 5432 connection.");
   }
 
   const sql = postgres(url, { prepare, max: 1, connect_timeout: 15, onnotice: () => {} });
@@ -110,9 +113,10 @@ async function checkConnection(label, url, { expectedPort, prepare }) {
 
 console.log("Checking Supabase wiring...");
 
-const runtime = await checkConnection("DATABASE_URL (app runtime, pooled)", process.env.DATABASE_URL, {
-  expectedPort: "6543",
-  prepare: false,
+const runtime = await checkConnection("DATABASE_URL (app runtime)", process.env.DATABASE_URL, {
+  expectedPort: "5432",
+  prepare: true,
+  isRuntime: true,
 });
 if (runtime) await runtime.end({ timeout: 0 }).catch(() => {});
 

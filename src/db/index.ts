@@ -13,11 +13,22 @@ function getDb(): Database {
       throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local and fill it in.");
     }
 
-    // Supabase's transaction pooler (Supavisor, port 6543) doesn't support prepared
-    // statements, and each serverless invocation wants at most one connection.
+    /**
+     * DATABASE_URL must be Supabase's *session* pooler (port 5432 on
+     * `...pooler.supabase.com`), not the transaction pooler (6543).
+     *
+     * postgres.js pipelines queries onto each connection, which Supavisor's
+     * transaction mode cannot split across server connections: as soon as two
+     * queries overlap, the connection deadlocks and every request hangs until it
+     * times out. Measured against this database — transaction mode wedged at 5
+     * concurrent queries, session mode served 40 in 639ms. A single page load
+     * issues several queries in parallel, so this is not an edge case.
+     *
+     * Session mode holds a server connection per client connection, so keep the
+     * pool small and let idle connections go quickly.
+     */
     const client = postgres(url, {
-      prepare: false,
-      max: 1,
+      max: 5,
       idle_timeout: 20,
       connect_timeout: 10,
     });

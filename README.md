@@ -14,13 +14,14 @@ branded PDFs, and tracking their status. Built to the brief in
 
 Create a project at [supabase.com](https://supabase.com), then:
 
-- **Connect → Connection string** — copy both the *transaction pooler* string (port `6543`) and a
-  port `5432` string. The app runs on the pooler; migrations need the `5432` connection.
+- **Connect → Connection string** — copy the **session pooler** string: port `5432` on
+  `...pooler.supabase.com`. That is what the app runs on (`DATABASE_URL`) and it also runs
+  migrations fine (`DIRECT_URL`).
 
-  If the *direct* connection (`db.<ref>.supabase.co:5432`) times out, use the **session pooler**
-  string instead — same port `5432`, but on `...pooler.supabase.com`. Direct connections are
-  IPv6-only on new Supabase projects, so they fail on IPv4-only networks. The session pooler is the
-  IPv4-friendly equivalent and runs migrations fine.
+  Do **not** use the transaction pooler (port `6543`) — see
+  [Database access](#database-access) for why it deadlocks this driver. The plain direct
+  connection (`db.<ref>.supabase.co:5432`) works from a dev machine but is IPv6-only, so it
+  cannot be reached from Vercel.
 - **Storage → New bucket** — create a **public** bucket called `branding` (this is where the company
   logo lives). Skip this if you don't need a logo on your PDFs.
 - **Project Settings → API** — copy the project URL and the `service_role` key.
@@ -37,8 +38,8 @@ cp .env.example .env.local
 
 | Variable | What it's for |
 | --- | --- |
-| `DATABASE_URL` | Supabase transaction pooler (`:6543`) — used at runtime |
-| `DIRECT_URL` | Supabase direct connection (`:5432`) — used only for migrations |
+| `DATABASE_URL` | Supabase **session pooler** (`...pooler.supabase.com:5432`) — used at runtime |
+| `DIRECT_URL` | A port `5432` connection — used only for migrations |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, for the logo upload |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side only. Never goes near the browser |
 | `SUPABASE_STORAGE_BUCKET` | Bucket name, defaults to `branding` |
@@ -99,14 +100,15 @@ Import it at [vercel.com/new](https://vercel.com/new). The Next.js preset is det
 automatically — build command, output directory and install command all stay on their defaults.
 Then work through the four points below before you trust the first deploy.
 
-#### 1. `DATABASE_URL` must be the pooler
+#### 1. `DATABASE_URL` must be the session pooler
 
-This is the one that silently breaks. Use the **transaction pooler** string (port `6543`,
-`...pooler.supabase.com`) from Supabase → Connect.
+Use the **session pooler** string — port `5432` on `...pooler.supabase.com`. Two different failures
+are waiting either side of it, and `npm run db:check` catches both:
 
-The direct connection (`db.<ref>.supabase.co:5432`) works from a developer machine but is
-**IPv6-only**, and Vercel's functions are IPv4-only. The build will go green and every page behind
-the login will 500. `npm run db:check` warns when `DATABASE_URL` points at the direct host.
+- The **direct** connection (`db.<ref>.supabase.co:5432`) is IPv6-only and Vercel's functions are
+  IPv4-only. The build goes green and every page behind the login 500s.
+- The **transaction pooler** (`:6543`) connects fine and then deadlocks under any concurrency —
+  see [Database access](#database-access).
 
 #### 2. Set a real admin password
 
@@ -178,9 +180,22 @@ middleware.ts            Redirects unauthenticated requests to /login
 ### Database access
 
 The app talks to Postgres directly with Drizzle over `postgres.js` — it does not use the Supabase
-client library for data. On the pooler, prepared statements are off and connections are capped at
-one per invocation ([src/db/index.ts](src/db/index.ts)), which is what Supavisor's transaction mode
-expects from serverless functions.
+client library for data.
+
+`DATABASE_URL` must be Supabase's **session** pooler (port `5432`), not the transaction pooler
+(`6543`). `postgres.js` pipelines queries onto each connection, and Supavisor's transaction mode
+cannot split a pipelined connection across server connections — so as soon as two queries overlap,
+the connection deadlocks and requests hang until they time out. Measured against this database:
+
+| Pooler mode | 5 concurrent queries | 40 concurrent queries |
+| --- | --- | --- |
+| Transaction (`:6543`) | deadlocks | deadlocks |
+| Session (`:5432`) | 530ms | 639ms |
+
+A single page load issues several queries in parallel, so this is not an edge case — on the
+transaction pooler, one in five requests completed. Session mode holds a server connection per
+client connection, so the pool is kept small (`max: 5`) with a short idle timeout
+([src/db/index.ts](src/db/index.ts)).
 
 Because Supabase publishes the `public` schema through PostgREST using the (deliberately public)
 anon key, [drizzle/0001_enable_rls.sql](drizzle/0001_enable_rls.sql) enables row-level security on
