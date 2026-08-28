@@ -47,6 +47,9 @@ function explain(error) {
   if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(message)) {
     return "Host not found. Copy the string again from the Supabase Connect dialog.";
   }
+  if (/ENETUNREACH|EHOSTUNREACH/i.test(message)) {
+    return "Network unreachable — db.<ref>.supabase.co is IPv6-only. Use a pooler string instead.";
+  }
   if (/\[YOUR-PASSWORD\]|YOUR-PASSWORD/i.test(message)) {
     return "The placeholder [YOUR-PASSWORD] is still in the connection string.";
   }
@@ -73,13 +76,24 @@ async function checkConnection(label, url, { expectedPort, prepare }) {
     bad("Not a valid connection string");
     return null;
   }
+  const isDirectHost = /^db\..*\.supabase\.co$/.test(parts.host);
+
   if (parts.port !== expectedPort) {
-    warn(
-      `Port is ${parts.port}, expected ${expectedPort}`,
-      expectedPort === "6543"
-        ? "DATABASE_URL should be the transaction pooler (:6543)."
-        : "DIRECT_URL should be the direct connection (:5432).",
-    );
+    if (expectedPort === "6543" && isDirectHost) {
+      // Fine for local dev, fatal in production: Vercel functions are IPv4-only
+      // and db.<ref>.supabase.co resolves to IPv6 only.
+      warn(
+        "DATABASE_URL is the direct connection, not the pooler",
+        "OK locally. Before deploying, swap in the transaction pooler string (:6543).",
+      );
+    } else {
+      warn(
+        `Port is ${parts.port}, expected ${expectedPort}`,
+        expectedPort === "6543"
+          ? "DATABASE_URL should be the transaction pooler (:6543)."
+          : "DIRECT_URL should be a port 5432 connection.",
+      );
+    }
   }
 
   const sql = postgres(url, { prepare, max: 1, connect_timeout: 15, onnotice: () => {} });
