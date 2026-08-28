@@ -10,6 +10,8 @@
   --color-body: #d7d7e4;
   --color-muted: #8f8fa6;
   --color-brand: #ff3ea5;
+  /* Exact yellow of the bulb in the logo. */
+  --color-bulb: #f0e040;
   --color-brand-dim: #b32d74;
   --color-accent: #22d3ee;
   --color-positive: #34d399;

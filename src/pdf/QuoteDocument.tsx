@@ -23,7 +23,14 @@ export type QuotePdfData = {
   };
 };
 
-const BRAND = "#d81b78";
+/**
+ * Brand colours taken from the logo. BULB is the exact yellow of the bulb
+ * (#f0e040), used for filled shapes only: as ink on white paper it measures
+ * 1.36:1 contrast, which is unreadable. GOLD is the same hue deepened to 5.27:1
+ * so headings and totals stay legible when the quote is printed.
+ */
+const BULB = "#f0e040";
+const GOLD = "#7a6c14";
 const INK = "#14141c";
 const MUTED = "#6b6b7b";
 const LINE = "#d9d9e3";
@@ -39,20 +46,12 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  logo: {
-    maxHeight: 62,
-    maxWidth: 120,
-    marginBottom: 8,
-    objectFit: "contain",
-    borderWidth: 1,
-    borderColor: INK,
-    borderStyle: "solid",
-  },
+  logo: { maxHeight: 62, maxWidth: 120, marginBottom: 8, objectFit: "contain" },
   companyName: { fontSize: 15, fontFamily: "Helvetica-Bold", marginBottom: 3 },
   muted: { color: MUTED },
   metaBox: { alignItems: "flex-end" },
-  quoteTitle: { fontSize: 20, fontFamily: "Helvetica-Bold", color: BRAND, marginBottom: 4 },
-  rule: { height: 2, backgroundColor: BRAND, marginTop: 14, marginBottom: 16 },
+  quoteTitle: { fontSize: 20, fontFamily: "Helvetica-Bold", color: GOLD, marginBottom: 4 },
+  rule: { height: 3, backgroundColor: BULB, marginTop: 14, marginBottom: 16 },
   columns: { flexDirection: "row", gap: 24, marginBottom: 18 },
   column: { flex: 1 },
   sectionLabel: {
@@ -91,7 +90,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     paddingTop: 6,
   },
-  grandTotal: { fontSize: 13, fontFamily: "Helvetica-Bold", color: BRAND },
+  grandTotal: { fontSize: 13, fontFamily: "Helvetica-Bold", color: GOLD },
   terms: {
     marginTop: 26,
     borderTopWidth: 0.5,

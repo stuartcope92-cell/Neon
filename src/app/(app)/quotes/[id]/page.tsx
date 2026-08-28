@@ -77,7 +77,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                     alt={settings.companyName || "Company logo"}
                     width={110}
                     height={140}
-                    className="mb-3 h-20 w-auto border border-black object-contain"
+                    className="mb-3 h-20 w-auto object-contain"
                     unoptimized
                   />
                 ) : null}
@@ -181,7 +181,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                 )}
                 <div className="flex justify-between border-t border-line-soft pt-2">
                   <dt className="font-semibold text-white">Total</dt>
-                  <dd className="text-lg font-bold text-brand">{formatGBP(totals.total)}</dd>
+                  <dd className="text-lg font-bold text-bulb">{formatGBP(totals.total)}</dd>
                 </div>
               </dl>
 
