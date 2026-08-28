@@ -54,6 +54,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     validUntil: quote.validUntil,
     signDescription: quote.signDescription,
     discountPercent: quote.discountPercent,
+    profitMarginPercent: quote.profitMarginPercent,
+    materialsMarginPercent: quote.materialsMarginPercent,
     vatApplied: quote.vatApplied,
     vatRatePercent: quote.vatRatePercent,
     termsAndNotes: quote.termsAndNotes,
@@ -65,6 +67,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     },
     lineItems: quote.lineItems.map((item) => ({
       id: item.id,
+      type: item.type,
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,

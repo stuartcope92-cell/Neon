@@ -7,7 +7,7 @@ import { materialPrices } from "@/db/schema";
 import { requireSession } from "@/lib/auth";
 import { updateSettings } from "@/lib/settings";
 import { storageConfigured, uploadLogo } from "@/lib/storage";
-import { toNumber } from "@/lib/money";
+import { clampMargin, toNumber } from "@/lib/money";
 import type { ActionState } from "@/lib/types";
 
 function text(formData: FormData, key: string): string | null {
@@ -63,6 +63,10 @@ export async function saveSettingsAction(
       website: text(formData, "website"),
       hourlyRate: decimal(formData, "hourlyRate", "0"),
       vatRegistered: formData.get("vatRegistered") === "on",
+      profitMarginPercent: clampMargin(String(formData.get("profitMarginPercent") ?? "0")).toFixed(2),
+      materialsMarginPercent: clampMargin(
+        String(formData.get("materialsMarginPercent") ?? "0"),
+      ).toFixed(2),
       vatRatePercent: decimal(formData, "vatRatePercent", "20"),
       defaultTermsAndNotes: String(formData.get("defaultTermsAndNotes") ?? ""),
       quoteNumberPrefix: String(formData.get("quoteNumberPrefix") ?? "").trim(),

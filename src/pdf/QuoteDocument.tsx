@@ -1,6 +1,14 @@
 import React from "react";
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { formatGBP, formatQuantity, lineTotal, toNumber, type Totals } from "@/lib/money";
+import {
+  formatGBP,
+  formatQuantity,
+  lineSellTotal,
+  sellUnitPrice,
+  toNumber,
+  type Totals,
+} from "@/lib/money";
+import type { LineItemType } from "@/db/schema";
 import { formatDate } from "@/lib/dates";
 
 export type QuotePdfData = {
@@ -9,11 +17,19 @@ export type QuotePdfData = {
   validUntil: string | null;
   signDescription: string;
   discountPercent: string;
+  profitMarginPercent: string;
+  materialsMarginPercent: string;
   vatApplied: boolean;
   vatRatePercent: string;
   termsAndNotes: string;
   customer: { name: string; email: string | null; phone: string | null; address: string | null };
-  lineItems: Array<{ id: number; description: string; quantity: string; unitPrice: string }>;
+  lineItems: Array<{
+    id: number;
+    type: LineItemType;
+    description: string;
+    quantity: string;
+    unitPrice: string;
+  }>;
   totals: Totals;
   company: {
     name: string;
@@ -112,6 +128,12 @@ const styles = StyleSheet.create({
 
 export default function QuoteDocument({ data }: { data: QuotePdfData }) {
   const { company, customer, totals } = data;
+  // Prices on the document are cost plus margin. The cost and the margin itself
+  // never appear anywhere on the customer's copy.
+  const margins = {
+    profitMarginPercent: data.profitMarginPercent,
+    materialsMarginPercent: data.materialsMarginPercent,
+  };
 
   return (
     <Document
@@ -171,9 +193,9 @@ export default function QuoteDocument({ data }: { data: QuotePdfData }) {
           <View key={item.id} style={styles.row} wrap={false}>
             <Text style={styles.colDescription}>{item.description}</Text>
             <Text style={styles.colQty}>{formatQuantity(toNumber(item.quantity))}</Text>
-            <Text style={styles.colUnit}>{formatGBP(toNumber(item.unitPrice))}</Text>
+            <Text style={styles.colUnit}>{formatGBP(sellUnitPrice(item, margins))}</Text>
             <Text style={[styles.colTotal, styles.strong]}>
-              {formatGBP(lineTotal(item.quantity, item.unitPrice))}
+              {formatGBP(lineSellTotal(item, margins))}
             </Text>
           </View>
         ))}

@@ -38,6 +38,8 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
       <QuoteBuilder
         defaults={{
           hourlyRate: settings.hourlyRate,
+          profitMarginPercent: settings.profitMarginPercent,
+          materialsMarginPercent: settings.materialsMarginPercent,
           vatRegistered: settings.vatRegistered,
           vatRatePercent: settings.vatRatePercent,
           defaultTermsAndNotes: settings.defaultTermsAndNotes,
@@ -50,6 +52,8 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
           customerId: quote.customerId,
           signDescription: quote.signDescription,
           discountPercent: quote.discountPercent,
+          profitMarginPercent: quote.profitMarginPercent,
+          materialsMarginPercent: quote.materialsMarginPercent,
           vatApplied: quote.vatApplied,
           vatRatePercent: quote.vatRatePercent,
           validUntil: quote.validUntil,

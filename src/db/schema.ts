@@ -54,6 +54,13 @@ export const settings = pgTable("settings", {
    * something you have to remember to switch off.
    */
   vatRegistered: boolean("vat_registered").notNull().default(false),
+  /** Default margins for new quotes. True margin (of the selling price), not markup. */
+  profitMarginPercent: numeric("profit_margin_percent", { precision: 5, scale: 2 })
+    .notNull()
+    .default("0"),
+  materialsMarginPercent: numeric("materials_margin_percent", { precision: 5, scale: 2 })
+    .notNull()
+    .default("0"),
   vatRatePercent: numeric("vat_rate_percent", { precision: 5, scale: 2 }).notNull().default("20"),
   defaultTermsAndNotes: text("default_terms_and_notes").notNull().default(""),
   quoteNumberPrefix: text("quote_number_prefix").notNull().default("NQ-"),
@@ -91,6 +98,17 @@ export const quotes = pgTable("quotes", {
   /** VAT rate captured at creation time so historical quotes stay accurate. */
   vatRatePercent: numeric("vat_rate_percent", { precision: 5, scale: 2 }).notNull().default("20"),
   discountPercent: numeric("discount_percent", { precision: 5, scale: 2 }).notNull().default("0"),
+  /**
+   * Margins captured per quote so re-pricing in Settings never rewrites a quote
+   * already sent. Profit margin applies to labour and custom lines, materials
+   * margin to material lines.
+   */
+  profitMarginPercent: numeric("profit_margin_percent", { precision: 5, scale: 2 })
+    .notNull()
+    .default("0"),
+  materialsMarginPercent: numeric("materials_margin_percent", { precision: 5, scale: 2 })
+    .notNull()
+    .default("0"),
   validUntil: date("valid_until"),
   internalNotes: text("internal_notes"),
   /** Terms snapshot, so editing Settings doesn't rewrite quotes already sent. */

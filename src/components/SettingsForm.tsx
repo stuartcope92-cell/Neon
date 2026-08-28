@@ -99,6 +99,27 @@ export default function SettingsForm({ settings }: { settings: Settings }) {
           />
         </div>
 
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Profit margin (%)"
+            name="profitMarginPercent"
+            inputMode="decimal"
+            defaultValue={String(toNumber(settings.profitMarginPercent))}
+          />
+          <Field
+            label="Materials margin (%)"
+            name="materialsMarginPercent"
+            inputMode="decimal"
+            defaultValue={String(toNumber(settings.materialsMarginPercent))}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Margin of the selling price, not a markup: 20% on £100 of cost prices at £125, of which
+          £25 is yours. The profit margin applies to labour and custom lines, the materials margin to
+          lines from the price list. Both are defaults you can override on any quote, and neither
+          appears on the customer&rsquo;s PDF &mdash; they&rsquo;re built into the prices shown.
+        </p>
+
         <label className="mt-4 flex items-start gap-3 rounded-lg border border-line-soft p-3 text-sm">
           <input
             type="checkbox"

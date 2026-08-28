@@ -15,6 +15,8 @@ export type QuoteFormPayload = {
   newCustomer: { name: string; email: string; phone: string; address: string } | null;
   signDescription: string;
   discountPercent: string;
+  profitMarginPercent: string;
+  materialsMarginPercent: string;
   vatApplied: boolean;
   vatRatePercent: string;
   validUntil: string | null;

@@ -4,7 +4,13 @@ import Image from "next/image";
 import { requireSession } from "@/lib/auth";
 import { getQuote, totalsFor } from "@/lib/quotes";
 import { getSettings } from "@/lib/settings";
-import { formatGBP, formatQuantity, lineTotal, toNumber } from "@/lib/money";
+import {
+  formatGBP,
+  formatQuantity,
+  lineSellTotal,
+  sellUnitPrice,
+  toNumber,
+} from "@/lib/money";
 import { formatDate, formatDateTime, isPastISO } from "@/lib/dates";
 import StatusBadge from "@/components/StatusBadge";
 import StatusChanger from "@/components/StatusChanger";
@@ -22,6 +28,10 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   if (!quote) notFound();
 
   const totals = totalsFor(quote);
+  const margins = {
+    profitMarginPercent: quote.profitMarginPercent,
+    materialsMarginPercent: quote.materialsMarginPercent,
+  };
   const expired = isPastISO(quote.validUntil) && quote.status === "sent";
 
   return (
@@ -142,10 +152,10 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                           {formatQuantity(toNumber(item.quantity))}
                         </td>
                         <td className="py-2 text-right text-muted">
-                          {formatGBP(toNumber(item.unitPrice))}
+                          {formatGBP(sellUnitPrice(item, margins))}
                         </td>
                         <td className="py-2 text-right font-medium text-white">
-                          {formatGBP(lineTotal(item.quantity, item.unitPrice))}
+                          {formatGBP(lineSellTotal(item, margins))}
                         </td>
                       </tr>
                     ))
@@ -186,6 +196,32 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                 </p>
               ) : null}
             </div>
+          </section>
+
+          <section className="card p-5">
+            <p className="label">Margin — internal only, never shown to the customer</p>
+            <dl className="grid gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-xs text-muted">Cost of lines</dt>
+                <dd className="font-semibold text-body">{formatGBP(totals.costSubtotal)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Margin added</dt>
+                <dd className="font-semibold text-positive">+{formatGBP(totals.marginAmount)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Profit margin</dt>
+                <dd className="font-semibold text-body">
+                  {formatQuantity(toNumber(quote.profitMarginPercent))}%
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Materials margin</dt>
+                <dd className="font-semibold text-body">
+                  {formatQuantity(toNumber(quote.materialsMarginPercent))}%
+                </dd>
+              </div>
+            </dl>
           </section>
 
           {quote.internalNotes ? (

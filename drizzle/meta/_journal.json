@@ -29,6 +29,13 @@
       "when": 1787951295809,
       "tag": "0003_vat_registered",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787951703652,
+      "tag": "0004_margins",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   quoteEvents,
   quoteLineItems,
   quotes,
+  type LineItemType,
   type QuoteStatus,
 } from "@/db/schema";
 import { calculateTotals, type Totals } from "./money";
@@ -46,13 +47,19 @@ export async function getQuote(id: number) {
 }
 
 export function totalsFor(quote: {
-  lineItems: Array<{ quantity: string; unitPrice: string }>;
+  lineItems: Array<{ type?: LineItemType; quantity: string; unitPrice: string }>;
+  profitMarginPercent: string;
+  materialsMarginPercent: string;
   discountPercent: string;
   vatApplied: boolean;
   vatRatePercent: string;
 }): Totals {
   return calculateTotals({
     lineItems: quote.lineItems,
+    margins: {
+      profitMarginPercent: quote.profitMarginPercent,
+      materialsMarginPercent: quote.materialsMarginPercent,
+    },
     discountPercent: quote.discountPercent,
     vatApplied: quote.vatApplied,
     vatRatePercent: quote.vatRatePercent,
@@ -96,7 +103,10 @@ export async function listQuotes(filters: QuoteFilters = {}) {
   const items = quoteIds.length
     ? await db.select().from(quoteLineItems).where(inArray(quoteLineItems.quoteId, quoteIds))
     : [];
-  const byQuote = new Map<number, Array<{ quantity: string; unitPrice: string }>>();
+  const byQuote = new Map<
+    number,
+    Array<{ type: LineItemType; quantity: string; unitPrice: string }>
+  >();
   for (const item of items) {
     const list = byQuote.get(item.quoteId) ?? [];
     list.push(item);
@@ -108,6 +118,8 @@ export async function listQuotes(filters: QuoteFilters = {}) {
     customer: row.customer,
     totals: totalsFor({
       lineItems: byQuote.get(row.quote.id) ?? [],
+      profitMarginPercent: row.quote.profitMarginPercent,
+      materialsMarginPercent: row.quote.materialsMarginPercent,
       discountPercent: row.quote.discountPercent,
       vatApplied: row.quote.vatApplied,
       vatRatePercent: row.quote.vatRatePercent,

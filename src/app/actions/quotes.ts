@@ -9,7 +9,7 @@ import { requireSession } from "@/lib/auth";
 import { getQuote, logQuoteEvent } from "@/lib/quotes";
 import { getSettings, reserveQuoteNumber } from "@/lib/settings";
 import { STATUS_LABELS, type ActionState, type QuoteFormPayload } from "@/lib/types";
-import { toNumber } from "@/lib/money";
+import { clampMargin, toNumber } from "@/lib/money";
 import { addDaysISO } from "@/lib/dates";
 
 function decimal(value: string | number, fallback = "0"): string {
@@ -80,6 +80,8 @@ export async function saveQuoteAction(
       vatApplied,
       vatRatePercent: decimal(payload.vatRatePercent, "20"),
       discountPercent: decimal(payload.discountPercent),
+      profitMarginPercent: clampMargin(payload.profitMarginPercent).toFixed(2),
+      materialsMarginPercent: clampMargin(payload.materialsMarginPercent).toFixed(2),
       validUntil: payload.validUntil || null,
       internalNotes: payload.internalNotes.trim() || null,
       termsAndNotes: payload.termsAndNotes ?? "",
@@ -156,6 +158,8 @@ export async function duplicateQuoteAction(formData: FormData): Promise<void> {
       vatApplied: source.vatApplied,
       vatRatePercent: source.vatRatePercent,
       discountPercent: source.discountPercent,
+      profitMarginPercent: source.profitMarginPercent,
+      materialsMarginPercent: source.materialsMarginPercent,
       validUntil: addDaysISO(30),
       internalNotes: source.internalNotes,
       termsAndNotes: source.termsAndNotes,

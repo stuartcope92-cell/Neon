@@ -4,13 +4,21 @@ import { useActionState, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { saveQuoteAction } from "@/app/actions/quotes";
-import { calculateTotals, formatGBP, lineTotal, toNumber } from "@/lib/money";
+import {
+  calculateTotals,
+  formatGBP,
+  lineSellTotal,
+  sellUnitPrice,
+  toNumber,
+} from "@/lib/money";
 import { addDaysISO } from "@/lib/dates";
 import type { ActionState, LineItemDraft, QuoteFormPayload } from "@/lib/types";
 import type { Customer, LineItemType, MaterialPrice } from "@/db/schema";
 
 export type BuilderDefaults = {
   hourlyRate: string;
+  profitMarginPercent: string;
+  materialsMarginPercent: string;
   vatRegistered: boolean;
   vatRatePercent: string;
   defaultTermsAndNotes: string;
@@ -22,6 +30,8 @@ export type BuilderQuote = {
   customerId: number;
   signDescription: string;
   discountPercent: string;
+  profitMarginPercent: string;
+  materialsMarginPercent: string;
   vatApplied: boolean;
   vatRatePercent: string;
   validUntil: string | null;
@@ -66,6 +76,12 @@ export default function QuoteBuilder({
   const [discountPercent, setDiscountPercent] = useState(
     quote ? String(toNumber(quote.discountPercent)) : "0",
   );
+  const [profitMarginPercent, setProfitMarginPercent] = useState(
+    String(toNumber(quote ? quote.profitMarginPercent : defaults.profitMarginPercent)),
+  );
+  const [materialsMarginPercent, setMaterialsMarginPercent] = useState(
+    String(toNumber(quote ? quote.materialsMarginPercent : defaults.materialsMarginPercent)),
+  );
   // VAT is only ever an option for a VAT-registered business.
   const [vatApplied, setVatApplied] = useState(
     defaults.vatRegistered ? (quote?.vatApplied ?? true) : false,
@@ -91,9 +107,14 @@ export default function QuoteBuilder({
 
   const dragIndex = useRef<number | null>(null);
 
+  const margins = useMemo(
+    () => ({ profitMarginPercent, materialsMarginPercent }),
+    [profitMarginPercent, materialsMarginPercent],
+  );
+
   const totals = useMemo(
-    () => calculateTotals({ lineItems: rows, discountPercent, vatApplied, vatRatePercent }),
-    [rows, discountPercent, vatApplied, vatRatePercent],
+    () => calculateTotals({ lineItems: rows, margins, discountPercent, vatApplied, vatRatePercent }),
+    [rows, margins, discountPercent, vatApplied, vatRatePercent],
   );
 
   const filteredCustomers = useMemo(() => {
@@ -108,6 +129,8 @@ export default function QuoteBuilder({
     newCustomer: customerMode === "new" ? newCustomer : null,
     signDescription,
     discountPercent,
+    profitMarginPercent,
+    materialsMarginPercent,
     vatApplied,
     vatRatePercent,
     validUntil: validUntil || null,
@@ -350,8 +373,8 @@ export default function QuoteBuilder({
                 <span />
                 <span>Description</span>
                 <span>Qty</span>
-                <span>Unit price</span>
-                <span className="text-right">Total</span>
+                <span>Cost each</span>
+                <span className="text-right">Charged</span>
                 <span />
               </div>
 
@@ -419,8 +442,15 @@ export default function QuoteBuilder({
                     />
                   </div>
 
-                  <div className="text-right text-sm font-semibold text-white">
-                    {formatGBP(lineTotal(row.quantity, row.unitPrice))}
+                  <div className="text-right text-sm">
+                    <span className="font-semibold text-white">
+                      {formatGBP(lineSellTotal(row, margins))}
+                    </span>
+                    {sellUnitPrice(row, margins) !== toNumber(row.unitPrice) ? (
+                      <span className="block text-[10px] text-muted">
+                        @ {formatGBP(sellUnitPrice(row, margins))}
+                      </span>
+                    ) : null}
                   </div>
 
                   <button
@@ -486,6 +516,30 @@ export default function QuoteBuilder({
               />
             </div>
             <div>
+              <label className="label" htmlFor="profit-margin">
+                Profit margin %
+              </label>
+              <input
+                id="profit-margin"
+                className="field"
+                inputMode="decimal"
+                value={profitMarginPercent}
+                onChange={(event) => setProfitMarginPercent(event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="materials-margin">
+                Materials margin %
+              </label>
+              <input
+                id="materials-margin"
+                className="field"
+                inputMode="decimal"
+                value={materialsMarginPercent}
+                onChange={(event) => setMaterialsMarginPercent(event.target.value)}
+              />
+            </div>
+            <div>
               <label className="label" htmlFor="valid-until">
                 Valid until
               </label>
@@ -517,6 +571,22 @@ export default function QuoteBuilder({
               </Link>
             </p>
           )}
+
+          {totals.marginAmount !== 0 ? (
+            <dl className="space-y-1.5 rounded-lg border border-line-soft bg-ink/40 p-3 text-xs">
+              <p className="mb-1 font-semibold uppercase tracking-wide text-muted">
+                Internal — not on the quote
+              </p>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted">Cost of lines</dt>
+                <dd>{formatGBP(totals.costSubtotal)}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted">Margin added</dt>
+                <dd className="text-positive">+{formatGBP(totals.marginAmount)}</dd>
+              </div>
+            </dl>
+          ) : null}
 
           <dl className="space-y-2 border-t border-line-soft pt-4 text-sm">
             <TotalRow label="Subtotal" value={formatGBP(totals.subtotal)} />

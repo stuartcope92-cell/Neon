@@ -245,6 +245,28 @@ vat      = (subtotal − discount) × vat%   (if VAT applies)
 total    = subtotal − discount + vat
 ```
 
+**Margins.** Two percentages, defaulted in Settings and editable on any quote: a **profit margin**
+applied to labour and custom lines, and a **materials margin** applied to lines from the price list.
+Each line is marked up exactly once.
+
+These are true margins, not markups — the percentage is of the selling price:
+
+```
+price = cost ÷ (1 − margin%)
+```
+
+So 20% on £100 of cost prices at £125, of which £25 (20% of £125) is profit. A markup of 20% would
+have given £120 and a real margin of only 16.7%.
+
+Line item `unitPrice` always stores **cost**. The margin is applied when pricing, and the marked-up
+unit price is rounded to pence before multiplying by quantity, so `quantity × unit price` always
+equals the line total printed next to it. Neither margin nor cost appears anywhere on the customer's
+PDF: they see only the marked-up prices, and the document reconciles. The builder and the quote page
+show cost and margin separately, marked as internal.
+
+Margins are snapshotted per quote, like VAT, so re-pricing in Settings never rewrites a quote
+already sent.
+
 **VAT.** Settings has a *VAT registered* switch, off by default — charging VAT you aren't
 registered for is a legal problem, so it is opt-in rather than something you have to remember to
 switch off. While it is off: the quote builder hides the per-quote VAT toggle, and neither the PDF
