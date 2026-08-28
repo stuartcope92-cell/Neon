@@ -22,8 +22,9 @@ Create a project at [supabase.com](https://supabase.com), then:
   [Database access](#database-access) for why it deadlocks this driver. The plain direct
   connection (`db.<ref>.supabase.co:5432`) works from a dev machine but is IPv6-only, so it
   cannot be reached from Vercel.
-- **Storage → New bucket** — create a **public** bucket called `branding` (this is where the company
-  logo lives). Skip this if you don't need a logo on your PDFs.
+- **Storage → New bucket** — only needed if you want to *change* the logo through the Settings page.
+  Create a **public** bucket called `branding`. The current logo ships with the app, so this is
+  optional (see [Company logo](#company-logo)).
 - **Project Settings → API** — copy the project URL and the `service_role` key.
 
 ### 2. Local environment
@@ -214,6 +215,24 @@ convenience, never the only check.
 Two things this deliberately does not have, being a small internal tool: **password reset** (locked
 out means signing up again with the code) and **session revocation** (deleting a user doesn't kill
 a session they already hold until it expires). Both are easy to add if you want them.
+
+### Company logo
+
+The logo lives in two places: `public/logo.png` for the browser, and
+[src/pdf/logo.ts](src/pdf/logo.ts) as a base64 data URI for the PDF. The duplication is
+deliberate — the PDF renders inside a serverless function, where files under `public/` are not
+reliably readable from disk, so a PDF that loads the logo off the filesystem works locally and
+breaks in production.
+
+To change the logo:
+
+```bash
+node scripts/bundle-logo.mjs
+```
+
+Replace `public/logo.png` first; the script regenerates the bundled copy. Alternatively, upload one
+through Settings (needs Supabase Storage configured) — an uploaded `logoUrl` starting with `http`
+takes precedence over the bundled file.
 
 ### Pricing
 

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { requireSession } from "@/lib/auth";
 import { getQuote, totalsFor } from "@/lib/quotes";
 import { getSettings } from "@/lib/settings";
@@ -70,6 +71,16 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line-soft p-5">
               <div>
+                {settings.logoUrl ? (
+                  <Image
+                    src={settings.logoUrl}
+                    alt={settings.companyName || "Company logo"}
+                    width={110}
+                    height={140}
+                    className="mb-3 h-20 w-auto border border-black object-contain"
+                    unoptimized
+                  />
+                ) : null}
                 <p className="text-lg font-bold text-white">
                   {settings.companyName || "Your company"}
                 </p>

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getQuote, totalsFor } from "@/lib/quotes";
 import { getSettings } from "@/lib/settings";
 import QuoteDocument, { type QuotePdfData } from "@/pdf/QuoteDocument";
+import { BUNDLED_LOGO } from "@/pdf/logo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,18 +14,25 @@ function safeFilePart(value: string): string {
   return value.replace(/[^a-zA-Z0-9 _-]/g, "").trim().replace(/\s+/g, "-") || "customer";
 }
 
-/** Inlines the logo as a data URI so react-pdf never has to fetch it itself. */
+/**
+ * Resolves the logo to a data URI, so react-pdf never fetches anything itself.
+ *
+ * An http(s) logoUrl means someone uploaded one through Settings (Supabase
+ * Storage). Anything else — unset, or the app-relative "/logo.png" — falls back
+ * to the logo bundled with the app, which is always available inside the
+ * serverless function.
+ */
 async function loadLogo(url: string | null): Promise<string | null> {
-  if (!url) return null;
+  if (!url?.startsWith("http")) return BUNDLED_LOGO;
   try {
     const response = await fetch(url);
-    if (!response.ok) return null;
+    if (!response.ok) return BUNDLED_LOGO;
     const contentType = response.headers.get("content-type") ?? "image/png";
-    if (contentType.includes("svg")) return null; // react-pdf can't rasterise SVG sources
+    if (contentType.includes("svg")) return BUNDLED_LOGO; // react-pdf can't rasterise SVG
     const base64 = Buffer.from(await response.arrayBuffer()).toString("base64");
     return `data:${contentType};base64,${base64}`;
   } catch {
-    return null;
+    return BUNDLED_LOGO;
   }
 }
 
