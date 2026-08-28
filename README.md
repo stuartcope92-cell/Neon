@@ -89,21 +89,75 @@ data.
 
 ### 5. GitHub → Vercel
 
-```bash
-git init && git add -A && git commit -m "Neon sign quote creator"
-```
+Push the repo:
 
 ```bash
-gh repo create neon-quote-creator --private --source=. --push
+git remote add origin <your-repo-url> && git push -u origin main
 ```
 
-Then import the repo at [vercel.com/new](https://vercel.com/new) and add every variable from the
-table above to **Settings → Environment Variables**. Pushes to `main` deploy automatically; pull
-requests get preview deployments. [.github/workflows/ci.yml](.github/workflows/ci.yml) runs the
-typecheck and build on every PR.
+Import it at [vercel.com/new](https://vercel.com/new). The Next.js preset is detected
+automatically — build command, output directory and install command all stay on their defaults.
+Then work through the four points below before you trust the first deploy.
 
-Migrations are **not** run by the deploy. After changing the schema, run `npm run db:migrate`
-locally with the production `DIRECT_URL` in your shell.
+#### 1. `DATABASE_URL` must be the pooler
+
+This is the one that silently breaks. Use the **transaction pooler** string (port `6543`,
+`...pooler.supabase.com`) from Supabase → Connect.
+
+The direct connection (`db.<ref>.supabase.co:5432`) works from a developer machine but is
+**IPv6-only**, and Vercel's functions are IPv4-only. The build will go green and every page behind
+the login will 500. `npm run db:check` warns when `DATABASE_URL` points at the direct host.
+
+#### 2. Set a real admin password
+
+The credentials in your local `.env.local` are for development. Generate a fresh hash for
+production so the deployed app doesn't share a password with your laptop:
+
+```bash
+npm run hash-password -- "a-strong-production-password"
+```
+
+Use a different `SESSION_SECRET` in production too.
+
+#### 3. Environment variables
+
+**Settings → Environment Variables**, applied to Production (and Preview, if you want preview
+deployments to work):
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | Transaction pooler string, port `6543` |
+| `SESSION_SECRET` | A fresh 32+ character random string |
+| `ADMIN_EMAIL` | Your real admin email |
+| `ADMIN_PASSWORD_HASH` | The production hash from step 2 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Only if you want logo upload |
+| `SUPABASE_SERVICE_ROLE_KEY` | Only if you want logo upload |
+| `SUPABASE_STORAGE_BUCKET` | Only if your bucket isn't named `branding` |
+
+`DIRECT_URL` is **not** needed on Vercel — migrations only ever run from your machine.
+
+Vercel doesn't rebuild when you change an environment variable, so redeploy afterwards.
+
+#### 4. Migrations
+
+The deploy does not run them. Apply the schema from your machine, pointed at the same database:
+
+```bash
+npm run db:migrate
+```
+
+Preview deployments share the production database unless you create a second Supabase project for
+them. For a single-user tool that's usually fine, but it does mean a preview deploy writes real
+quotes.
+
+Pushes to `main` deploy automatically. [.github/workflows/ci.yml](.github/workflows/ci.yml) runs
+the typecheck and build on every PR.
+
+#### Optional: put the functions near the database
+
+Every page does a database round trip, so the default US function region adds latency if your
+Supabase project is in Europe. Set **Settings → Functions → Function Region** to the region
+matching your Supabase project (for a London project, `lhr1`).
 
 ## How it fits together
 
