@@ -1,0 +1,36 @@
+{
+  "name": "neon-quote-creator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "db:push": "drizzle-kit push",
+    "hash-password": "node scripts/hash-password.mjs"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.3.0",
+    "@supabase/supabase-js": "^2.112.4",
+    "drizzle-orm": "^0.44.2",
+    "jose": "^6.0.11",
+    "next": "^15.4.6",
+    "postgres": "^3.4.9",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.4",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3"
+  }
+}

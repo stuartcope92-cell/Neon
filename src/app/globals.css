@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0a0a10;
+  --color-surface: #12121b;
+  --color-surface-2: #1a1a26;
+  --color-surface-3: #23233312;
+  --color-line: #2b2b3d;
+  --color-line-soft: #22222f;
+  --color-body: #d7d7e4;
+  --color-muted: #8f8fa6;
+  --color-brand: #ff3ea5;
+  --color-brand-dim: #b32d74;
+  --color-accent: #22d3ee;
+  --color-positive: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #fb7185;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(1100px 620px at 12% -12%, rgba(255, 62, 165, 0.13), transparent 62%),
+    radial-gradient(900px 520px at 92% 4%, rgba(34, 211, 238, 0.1), transparent 58%),
+    var(--color-ink);
+  color: var(--color-body);
+  min-height: 100dvh;
+}
+
+.neon-text {
+  color: #fff;
+  text-shadow:
+    0 0 6px rgba(255, 62, 165, 0.85),
+    0 0 22px rgba(255, 62, 165, 0.45);
+}
+
+/* Shared control styling — keeps 40+ inputs across the app consistent. */
+.field {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line);
+  background: rgba(10, 10, 16, 0.6);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  color: var(--color-body);
+  outline: none;
+}
+.field::placeholder {
+  color: #6d6d85;
+}
+.field:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(255, 62, 165, 0.18);
+}
+.field:disabled {
+  opacity: 0.55;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.card {
+  border-radius: 0.85rem;
+  border: 1px solid var(--color-line-soft);
+  background: rgba(18, 18, 27, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line);
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-body);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+.btn:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  border-color: transparent;
+  background: var(--color-brand);
+  color: #14040c;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #ff5cb4;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-body);
+}
