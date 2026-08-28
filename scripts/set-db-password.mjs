@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 /**
- * Puts your Supabase database password into .env.local without it appearing on
- * screen, in your shell history, or anywhere else.
+ * Puts your Supabase database password into .env.local.
  *   npm run db:password
  *
- * Prompts with the input hidden, URL-encodes the password, and substitutes it
- * into DATABASE_URL and DIRECT_URL.
+ * In an interactive terminal it prompts with the input hidden. Otherwise it
+ * reads the password from stdin, so this also works:
+ *   npm run db:password < password.txt
+ *
+ * Either way the password is URL-encoded and substituted into DATABASE_URL and
+ * DIRECT_URL, so characters like @ : / ? # can't break the connection string.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
@@ -13,12 +16,10 @@ import { createInterface } from "node:readline";
 const ENV_FILE = process.env.ENV_FILE ?? ".env.local";
 const PLACEHOLDER = "[YOUR-PASSWORD]";
 
-function prompt(question) {
+function promptHidden(question) {
   return new Promise((resolve) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    // Swallow the echo so the password never reaches the screen.
-    const hidden = process.stdin.isTTY;
-    if (hidden) rl._writeToOutput = () => {};
+    rl._writeToOutput = () => {}; // swallow the echo
     process.stdout.write(question);
     rl.question("", (answer) => {
       rl.close();
@@ -28,9 +29,26 @@ function prompt(question) {
   });
 }
 
-if (!process.stdin.isTTY) {
-  console.error("Run this from an interactive terminal so the password can stay hidden.");
-  process.exit(1);
+function readStdin() {
+  return new Promise((resolve) => {
+    let data = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on("end", () => resolve(data));
+    process.stdin.on("error", () => resolve(""));
+  });
+}
+
+function manualInstructions() {
+  console.error(
+    `\nCouldn't read a password here. Edit ${ENV_FILE} in your editor instead:\n\n` +
+      `  Replace ${PLACEHOLDER} on the DATABASE_URL and DIRECT_URL lines with your\n` +
+      "  Supabase database password. If it contains @ : / ? # or %, percent-encode it\n" +
+      "  (@ becomes %40, # becomes %23, % becomes %25).\n\n" +
+      "Then run: npm run db:check\n",
+  );
 }
 
 let contents;
@@ -41,7 +59,8 @@ try {
   process.exit(1);
 }
 
-if (!contents.includes(PLACEHOLDER)) {
+const occurrences = contents.split(PLACEHOLDER).length - 1;
+if (occurrences === 0) {
   console.error(
     `No ${PLACEHOLDER} left in ${ENV_FILE} — the password looks like it's already set.\n` +
       "To change it, paste the connection strings in fresh from Supabase and run this again.",
@@ -49,10 +68,14 @@ if (!contents.includes(PLACEHOLDER)) {
   process.exit(1);
 }
 
-const password = await prompt("Supabase database password (input hidden): ");
+const password = (
+  process.stdin.isTTY
+    ? await promptHidden("Supabase database password (input hidden): ")
+    : await readStdin()
+).trim();
 
 if (!password) {
-  console.error("Nothing entered, no changes made.");
+  manualInstructions();
   process.exit(1);
 }
 
@@ -60,7 +83,11 @@ if (!password) {
 const encoded = encodeURIComponent(password);
 writeFileSync(ENV_FILE, contents.split(PLACEHOLDER).join(encoded));
 
-const occurrences = contents.split(PLACEHOLDER).length - 1;
-console.log(`Password written into ${occurrences} connection string(s) in ${ENV_FILE}.`);
-if (encoded !== password) console.log("(URL-encoded — it contained characters that needed escaping.)");
+console.log(`Password written into ${occurrences} place(s) in ${ENV_FILE}.`);
+if (encoded !== password) {
+  console.log("(URL-encoded — it contained characters that needed escaping.)");
+}
+if (!process.stdin.isTTY) {
+  console.log("Note: read from stdin. If you piped it from a file, delete that file now.");
+}
 console.log("\nNext: npm run db:check");
